@@ -1,12 +1,12 @@
 #!/bin/sh
-# Builds dist/Doodoro GPUI.app: the release binary, the tomato icon and the fonts' licences (the
+# Builds dist/Doodoro.app: the release binary, the tomato icon and the fonts' licences (the
 # fonts themselves are compiled into the binary). Ad-hoc signed, for this Mac.
 set -e
 cd "$(dirname "$0")"
 
 cargo build --release
 
-APP="dist/Doodoro GPUI.app"
+APP="dist/Doodoro.app"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp target/release/doodoro "$APP/Contents/MacOS/doodoro"
@@ -20,9 +20,9 @@ cat > "$APP/Contents/Info.plist" <<'EOF'
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CFBundleName</key><string>Doodoro GPUI</string>
-	<key>CFBundleDisplayName</key><string>Doodoro GPUI</string>
-	<key>CFBundleIdentifier</key><string>local.doodoro.gpui</string>
+	<key>CFBundleName</key><string>Doodoro</string>
+	<key>CFBundleDisplayName</key><string>Doodoro</string>
+	<key>CFBundleIdentifier</key><string>local.doodoro</string>
 	<key>CFBundleExecutable</key><string>doodoro</string>
 	<key>CFBundleIconFile</key><string>icon</string>
 	<key>CFBundlePackageType</key><string>APPL</string>

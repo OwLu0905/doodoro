@@ -1,5 +1,5 @@
-// What Shape.svelte and the icon SVGs were in the gpuix-svelte version, painted as GPUI paths
-// instead: no SVG is rasterised, and the ring's arc is re-tessellated rather than re-rendered.
+// The card's shapes and the design's icon SVGs, painted as GPUI paths: no SVG is rasterised, and the
+// ring's arc is re-tessellated rather than re-rendered.
 
 use std::rc::Rc;
 

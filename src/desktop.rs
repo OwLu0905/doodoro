@@ -1,4 +1,4 @@
-// Sound, notifications and settings, done as the gpuix-svelte version's desktop.ts does them.
+// Sound, notifications and settings.
 
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
@@ -67,14 +67,13 @@ pub fn notify(title: &str, body: &str) {
     run("osascript", &["-e", &script]);
 }
 
-// Settings go to a small JSON file of their own, apart from the other versions'. DOODORO_SETTINGS
-// points it elsewhere (the benchmark does).
+// Settings go to a small JSON file of their own. DOODORO_SETTINGS points it elsewhere.
 fn settings_file() -> PathBuf {
     if let Ok(path) = std::env::var("DOODORO_SETTINGS") {
         return path.into();
     }
     let home = std::env::var("HOME").unwrap_or_default();
-    PathBuf::from(home).join("Library/Application Support/local.doodoro.gpui/settings.json")
+    PathBuf::from(home).join("Library/Application Support/Doodoro/settings.json")
 }
 
 /// Session lengths in minutes as last set (focus, short, long), or None on first run.

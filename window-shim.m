@@ -61,9 +61,10 @@ long pomodoro_hide_buttons(void) {
     return 1;
 }
 
-// The window's spot is kept in its own defaults domain, apart from the gpuix-svelte version's.
+// The window's spot is kept in its own defaults domain (a suite named after the .app's bundle id
+// would be refused inside it).
 static NSUserDefaults *pomodoro_defaults(void) {
-    return [[NSUserDefaults alloc] initWithSuiteName:@"local.doodoro.gpui.window"];
+    return [[NSUserDefaults alloc] initWithSuiteName:@"local.doodoro.window"];
 }
 
 // Saved and restored by the top-left corner: the window changes height when it is minimised to the

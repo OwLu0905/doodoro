@@ -1,4 +1,4 @@
-// Doodoro on GPUI directly: the gpuix-svelte version's App.svelte, ported to a GPUI view.
+// Doodoro: the card, the pill and the morph between them, as one GPUI view.
 
 mod desktop;
 mod draw;

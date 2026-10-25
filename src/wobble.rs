@@ -1,6 +1,5 @@
-// Hand-drawn outlines, ported from the gpuix-svelte version's wobble.ts with the same noise, so the
-// shapes come out the same. Each shape is sampled into a polyline and every point is pushed by a
-// smooth 2D noise field, standing in for the design's feTurbulence → feDisplacementMap.
+// Hand-drawn outlines. Each shape is sampled into a polyline and every point is pushed by a smooth 2D
+// noise field, standing in for the design's feTurbulence → feDisplacementMap.
 
 use std::f64::consts::PI;
 
