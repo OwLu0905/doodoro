@@ -1,4 +1,5 @@
 #import <AppKit/AppKit.h>
+#import <QuartzCore/QuartzCore.h>
 #import <dlfcn.h>
 
 // Compiled by build.rs and linked into the binary. GPUI has no options for these, so the
@@ -27,6 +28,13 @@ long pomodoro_float(void) {
     return 1;
 }
 
+static void pin_layers(NSView *view) {
+    if ([view.layer isKindOfClass:NSClassFromString(@"CAMetalLayer")]) {
+        view.layer.contentsGravity = kCAGravityTopLeft;
+    }
+    for (NSView *subview in view.subviews) pin_layers(subview);
+}
+
 /** The card draws its own close button, so the traffic lights go, and its own drag. */
 long pomodoro_hide_buttons(void) {
     NSWindow *window = pomodoro_window();
@@ -46,6 +54,10 @@ long pomodoro_hide_buttons(void) {
     window.titleVisibility = NSWindowTitleHidden;
     NSView *titlebar = [window standardWindowButton:NSWindowCloseButton].superview.superview;
     if ([NSStringFromClass(titlebar.class) isEqualToString:@"NSTitlebarContainerView"]) titlebar.hidden = YES;
+    // Until GPUI has drawn at a new size, the layer shows its last frame, stretched to fill the
+    // window by default: a giant pill flashes as the card opens. Pinned to the top-left corner,
+    // where the pill and the card both start, the last frame stays as it was.
+    pin_layers(window.contentView);
     return 1;
 }
 
@@ -117,28 +129,59 @@ int pomodoro_saved_position(double width, double height, double *x, double *y, u
 static NSPoint pill_top_left;
 static BOOL pill_pushed;
 
-/**
- * Resizes the content to width × height, keeping the top-left corner where it is, unless the
- * card would then hang off the screen: then it opens nudged back onto it.
- */
-long pomodoro_resize(long width, long height) {
-    NSWindow *window = pomodoro_window();
-    if (!window) return 0;
+// Where the window goes for content of width × height: its top-left corner kept, unless the card
+// would then hang off the screen. Then it is nudged back onto it, and `pushed` is set, with the
+// pill it grew from at `pill`.
+static NSRect plan_resize(NSWindow *window, long width, long height, BOOL *pushed, NSPoint *pill) {
     NSPoint top_left = NSMakePoint(NSMinX(window.frame), NSMaxY(window.frame));
     NSRect frame = [window frameRectForContentRect:NSMakeRect(0, 0, width, height)];
     BOOL growing = frame.size.width * frame.size.height > window.frame.size.width * window.frame.size.height;
     if (!growing && pill_pushed) top_left = pill_top_left;
-    pill_pushed = NO;
+    *pushed = NO;
     frame.origin = NSMakePoint(top_left.x, top_left.y - frame.size.height);
     if (growing) {
         NSRect fitted = fit_on_screen(frame, window.frame);
         if (!NSEqualPoints(fitted.origin, frame.origin)) {
-            pill_top_left = top_left;
-            pill_pushed = YES;
+            *pill = top_left;
+            *pushed = YES;
             frame = fitted;
         }
     }
+    return frame;
+}
+
+/** Resizes the content to width × height, where plan_resize puts it. */
+long pomodoro_resize(long width, long height) {
+    NSWindow *window = pomodoro_window();
+    if (!window) return 0;
+    BOOL pushed;
+    NSPoint pill;
+    NSRect frame = plan_resize(window, width, height, &pushed, &pill);
+    pill_pushed = pushed;
+    if (pushed) pill_top_left = pill;
     [window setFrame:frame display:YES];
+    // The frame drawn for the new size goes out with the window's new frame in this transaction,
+    // but GPUI's next frame is presented as soon as it is drawn. Committed now, before that frame,
+    // the window doesn't show the new picture in its old place (the pill cut off beside itself).
+    [CATransaction flush];
+    return 1;
+}
+
+/**
+ * Where the pill will be from the window's top-left corner (x right, y down) once it is resized to
+ * width × height, so that the card can be drawn growing from there in the first frame at that size.
+ */
+long pomodoro_pill_after_resize(long width, long height, double *x, double *y) {
+    NSWindow *window = pomodoro_window();
+    *x = *y = 0;
+    if (!window) return 0;
+    BOOL pushed;
+    NSPoint pill;
+    NSRect frame = plan_resize(window, width, height, &pushed, &pill);
+    if (pushed) {
+        *x = pill.x - NSMinX(frame);
+        *y = NSMaxY(frame) - pill.y;
+    }
     return 1;
 }
 

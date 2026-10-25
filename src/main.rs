@@ -274,6 +274,8 @@ struct Doodoro {
     ticker: Option<Task<()>>,
     grip_hint: bool,
     mini: bool,
+    /// Clicked open, waiting on the window to grow.
+    expanding: bool,
     /// The session ran out and waits on 下一步.
     done: bool,
     cycle: u32,
@@ -310,6 +312,7 @@ impl Doodoro {
             ticker: None,
             grip_hint: false,
             mini: false,
+            expanding: false,
             done: false,
             cycle: 0,
             morph: None,
@@ -465,8 +468,7 @@ impl Doodoro {
         .detach();
     }
 
-    fn place_pill(&mut self) {
-        let (x, y) = native::pill_offset();
+    fn place_pill(&mut self, (x, y): (f32, f32)) {
         self.pill_box = BoxPos { left: PILL_BOX.left + x, top: PILL_BOX.top + y, ..PILL_BOX };
     }
 
@@ -489,7 +491,7 @@ impl Doodoro {
         if self.morph.is_some() {
             return;
         }
-        self.place_pill();
+        self.place_pill(native::pill_offset());
         self.morph = Some(Morph::Shrink);
         self.morph_gen += 1;
         self.card_gen += 1;
@@ -511,16 +513,21 @@ impl Doodoro {
 
     /// A press on the pill drags it; a click that didn't move it opens the card again.
     fn expand(&mut self, cx: &mut Context<Self>) {
-        if self.morph.is_some() || native::window_was_dragged() {
+        if self.morph.is_some() || self.expanding || native::window_was_dragged() {
             return;
         }
-        // Taken now, so a second click before the window has grown is ignored too.
-        self.morph = Some(Morph::Grow);
+        // Not the morph yet: drawn before the window grows, it would start in the pill-sized window
+        // and jump back to the start once it has.
+        self.expanding = true;
         cx.spawn(async move |this, cx| {
-            native::resize_window(FULL.0, FULL.1);
+            // The card is set to grow from where the pill will be before the window grows, so the
+            // first frame at the new size, drawn as it is resized, already shows it: near an edge
+            // the window also moves, and the pill's last frame would flash beside where it was.
             this.update(cx, |this, cx| {
-                this.place_pill();
+                this.place_pill(native::pill_offset_after_resize(FULL.0, FULL.1));
                 this.mini = false;
+                this.expanding = false;
+                this.morph = Some(Morph::Grow);
                 this.morph_gen += 1;
                 cx.notify();
                 this.after(MORPH_S, cx, |this| {
@@ -530,6 +537,7 @@ impl Doodoro {
                 this.after(MORPH_S + 0.2, cx, |this| this.morph = None);
             })
             .ok();
+            native::resize_window(FULL.0, FULL.1);
         })
         .detach();
     }

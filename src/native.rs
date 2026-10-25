@@ -9,6 +9,7 @@ unsafe extern "C" {
     fn pomodoro_saved_position(width: f64, height: f64, x: *mut f64, y: *mut f64, display: *mut c_uint) -> c_int;
     fn pomodoro_show() -> c_long;
     fn pomodoro_resize(width: c_long, height: c_long) -> c_long;
+    fn pomodoro_pill_after_resize(width: c_long, height: c_long, x: *mut f64, y: *mut f64) -> c_long;
     fn pomodoro_pill_x() -> c_long;
     fn pomodoro_pill_y() -> c_long;
     fn pomodoro_drag_begin() -> c_long;
@@ -46,6 +47,13 @@ pub fn resize_window(width: f32, height: f32) {
 /// pushed onto the screen.
 pub fn pill_offset() -> (f32, f32) {
     unsafe { (pomodoro_pill_x() as f32, pomodoro_pill_y() as f32) }
+}
+
+/// Where the pill will sit from the window's top-left once it is resized to `width` × `height`.
+pub fn pill_offset_after_resize(width: f32, height: f32) -> (f32, f32) {
+    let (mut x, mut y) = (0.0, 0.0);
+    unsafe { pomodoro_pill_after_resize(width as c_long, height as c_long, &mut x, &mut y) };
+    (x as f32, y as f32)
 }
 
 /// Whether the last press moved the window, so a drag doesn't also count as a click.
