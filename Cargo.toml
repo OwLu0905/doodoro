@@ -8,6 +8,23 @@ gpui = "0.2.2"
 lyon = "1.0"
 serde_json = "1.0.154"
 
+# Windows has no AppKit shim: src/native_windows.rs does the same with Win32 calls. The manifest
+# makes the process per-monitor DPI aware.
+[target.'cfg(windows)'.dependencies]
+gpui = { version = "0.2.2", features = ["windows-manifest"] }
+image = { version = "0.25", default-features = false, features = ["png"] }
+windows-sys = { version = "0.59", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Dwm",
+    "Win32_Graphics_Gdi",
+    "Win32_Media_Audio",
+    "Win32_Storage_Xps",
+    "Win32_System_Threading",
+    "Win32_UI_HiDpi",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
 [build-dependencies]
 cc = "1.10.0"
 
