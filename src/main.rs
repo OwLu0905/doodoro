@@ -2,6 +2,7 @@
 
 mod desktop;
 mod draw;
+#[cfg_attr(windows, path = "native_windows.rs")]
 mod native;
 mod wobble;
 

@@ -1382,8 +1382,10 @@ version = "0.1.0"
 dependencies = [
  "cc",
  "gpui",
+ "image",
  "lyon",
  "serde_json",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

@@ -3,6 +3,8 @@
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::sync::OnceLock;
+#[cfg(windows)]
+use std::os::windows::ffi::OsStrExt;
 
 /**
  * The prototype's chime: triangle waves at E5, G5 and C6, 180 ms apart, each rising to 0.16 in
@@ -46,18 +48,34 @@ fn render_chime() -> std::io::Result<PathBuf> {
     Ok(file)
 }
 
+#[cfg(target_os = "macos")]
 fn run(cmd: &str, args: &[&str]) {
     let _ = Command::new(cmd).args(args).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).spawn();
 }
 
-pub fn chime() {
+fn chime_file() -> Option<&'static PathBuf> {
     static FILE: OnceLock<Option<PathBuf>> = OnceLock::new();
-    if let Some(file) = FILE.get_or_init(|| render_chime().ok()) {
+    FILE.get_or_init(|| render_chime().ok()).as_ref()
+}
+
+#[cfg(target_os = "macos")]
+pub fn chime() {
+    if let Some(file) = chime_file() {
         run("afplay", &[&file.to_string_lossy()]);
     }
 }
 
+#[cfg(windows)]
+pub fn chime() {
+    use windows_sys::Win32::Media::Audio::{PlaySoundW, SND_ASYNC, SND_FILENAME, SND_NODEFAULT};
+    if let Some(file) = chime_file() {
+        let wide: Vec<u16> = file.as_os_str().encode_wide().chain([0]).collect();
+        unsafe { PlaySoundW(wide.as_ptr(), std::ptr::null_mut(), SND_FILENAME | SND_ASYNC | SND_NODEFAULT) };
+    }
+}
+
 /// JSON's string quoting is also AppleScript's, near enough for these fixed messages.
+#[cfg(target_os = "macos")]
 pub fn notify(title: &str, body: &str) {
     let script = format!(
         "display notification {} with title {}",
@@ -67,13 +85,40 @@ pub fn notify(title: &str, body: &str) {
     run("osascript", &["-e", &script]);
 }
 
+/// A toast, shown through Windows PowerShell: a toast needs an app id the Start menu knows, and an
+/// unpackaged app has none of its own. The fixed messages need no escaping in the XML or the
+/// PowerShell string.
+#[cfg(windows)]
+pub fn notify(title: &str, body: &str) {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    const POWERSHELL_ID: &str = r"{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\powershell.exe";
+    let script = format!(
+        "[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > $null; \
+         [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom, ContentType = WindowsRuntime] > $null; \
+         $x = New-Object Windows.Data.Xml.Dom.XmlDocument; \
+         $x.LoadXml('<toast><visual><binding template=\"ToastGeneric\"><text>{title}</text><text>{body}</text></binding></visual></toast>'); \
+         [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('{POWERSHELL_ID}').Show([Windows.UI.Notifications.ToastNotification]::new($x))"
+    );
+    let _ = Command::new("powershell")
+        .args(["-NoProfile", "-NonInteractive", "-Command", &script])
+        .creation_flags(CREATE_NO_WINDOW)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn();
+}
+
 // Settings go to a small JSON file of their own. DOODORO_SETTINGS points it elsewhere.
 fn settings_file() -> PathBuf {
     if let Ok(path) = std::env::var("DOODORO_SETTINGS") {
         return path.into();
     }
-    let home = std::env::var("HOME").unwrap_or_default();
-    PathBuf::from(home).join("Library/Application Support/Doodoro/settings.json")
+    #[cfg(target_os = "macos")]
+    let file = PathBuf::from(std::env::var("HOME").unwrap_or_default()).join("Library/Application Support/Doodoro/settings.json");
+    #[cfg(windows)]
+    let file = PathBuf::from(std::env::var("APPDATA").unwrap_or_default()).join("Doodoro").join("settings.json");
+    file
 }
 
 /// Session lengths in minutes as last set (focus, short, long), or None on first run.
