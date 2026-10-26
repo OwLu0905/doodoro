@@ -1,0 +1,4 @@
+# The C runtime is linked into doodoro.exe, so it runs on a PC without the Visual C++
+# Redistributable.
+[target.'cfg(all(windows, target_env = "msvc"))']
+rustflags = ["-C", "target-feature=+crt-static"]

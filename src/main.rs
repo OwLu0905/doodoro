@@ -1,5 +1,8 @@
 // Doodoro: the card, the pill and the morph between them, as one GPUI view.
 
+// Opened from Explorer, a console program on Windows brings a console window along with it.
+#![cfg_attr(windows, windows_subsystem = "windows")]
+
 mod desktop;
 mod draw;
 #[cfg_attr(windows, path = "native_windows.rs")]

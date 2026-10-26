@@ -52,11 +52,14 @@ Build Tools) with the "Desktop development with C++" workload and a Windows SDK.
 compiles GPUI's shaders with the SDK's `fxc.exe`.
 
 ```bash
-cargo run --release
+cargo run --release      # builds and opens the window
+sh bundle-windows.sh     # builds dist/Doodoro-windows.zip, from Git Bash
 ```
 
-The binary is `target\release\doodoro.exe`, and it runs on its own: the fonts are compiled into it.
-To quit, press the card's × button.
+The binary is `target\release\doodoro.exe`, and it runs on its own: the fonts and the C runtime are
+compiled into it, so another PC needs nothing installed. `bundle-windows.sh` zips it with the
+licences and a short guide in Chinese. The binary is unsigned, so SmartScreen warns the first time
+it is opened. To quit, press the card's × button.
 
 On Windows the window floats above other windows and has no taskbar button. It does not float over
 games in exclusive full-screen mode. The chime plays through `PlaySound`, and the notification is a
